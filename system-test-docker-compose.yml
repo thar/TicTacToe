@@ -1,0 +1,27 @@
+version: '3'
+services:
+  selenoid:
+    image: "aerokube/selenoid"
+    network_mode: bridge
+    ports:
+      - "4444:4444"
+    volumes:
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/tmp/video:/tmp/video"
+    environment:
+      - OVERRIDE_VIDEO_OUTPUT_DIR=/tmp/video/
+    command: ["-conf", "$PWD/config/browsers.json", "-video-output-dir", "/tmp/video"]
+  test:
+    image: "maven:3-jdk-8-alpine"
+    network_mode: bridge
+    links:
+      - selenoid
+    working_dir: "$PWD"
+    volumes:
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home"
+    command: ["mvn", "test"]
+volumes:
+  codeurjc-forge-jenkins-volume:
+    external: true
+
