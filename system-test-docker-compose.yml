@@ -20,6 +20,7 @@ services:
     working_dir: "$PWD"
     volumes:
       - "codeurjc-forge-jenkins-volume:/var/jenkins_home"
+      - "$HOME/.m2:/root/.m2:z"
     environment:
       - ENABLE_VIDEO_RECORDING
     command: ["mvn", "test"]
