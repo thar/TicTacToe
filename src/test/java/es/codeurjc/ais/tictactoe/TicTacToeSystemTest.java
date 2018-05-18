@@ -38,7 +38,9 @@ public class TicTacToeSystemTest {
 	public void setupTest() throws Exception {
       ownIp = new NetworkUtils().getIp4NonLoopbackAddressOfThisMachine().getHostAddress();
       DesiredCapabilities capability_browser1 = DesiredCapabilities.chrome();
-      capability_browser1.setCapability("enableVideo", true);
+      if (null !=  System.getenv("ENABLE_VIDEO_RECORDING")) {
+          capability_browser1.setCapability("enableVideo", true);
+      }
       DesiredCapabilities capability_browser2 = DesiredCapabilities.chrome();
       browser1 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser1);
       browser2 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser2);
