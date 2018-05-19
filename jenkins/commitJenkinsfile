@@ -1,0 +1,35 @@
+pipeline {
+    agent none 
+    stages {
+        stage('Checkout') {
+            agent any 
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_REFSPEC"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'jenkins-master', \
+              refspec: 'refs/changes/*:refs/changes/*', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Test') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)"'
+                }
+            }
+            steps {
+                sh 'mvn -Dtest=BoardTest,TicTacToeGameTest test'
+            }
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                }
+            }
+        }
+    }
+}
