@@ -6,9 +6,9 @@ services:
     ports:
       - "4444:4444"
     volumes:
-      - "codeurjc-forge-jenkins-volume:/var/jenkins_home"
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home:z"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/tmp/video:/tmp/video"
+      - "/tmp/video:/tmp/video:z"
     environment:
       - OVERRIDE_VIDEO_OUTPUT_DIR=/tmp/video/
     command: ["-conf", "$PWD/config/browsers.json", "-video-output-dir", "/tmp/video", "-service-startup-timeout", "90s", "-session-attempt-timeout", "90s", "-session-delete-timeout", "90s", "-timeout", "90s"]
@@ -19,7 +19,7 @@ services:
       - selenoid
     working_dir: "$PWD"
     volumes:
-      - "codeurjc-forge-jenkins-volume:/var/jenkins_home"
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home:z"
       - "$HOME/.m2:/root/.m2:z"
     environment:
       - ENABLE_VIDEO_RECORDING

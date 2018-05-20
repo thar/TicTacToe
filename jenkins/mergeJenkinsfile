@@ -22,8 +22,8 @@ pipeline {
                     sh 'docker-compose -f system-test-docker-compose.yml up --abort-on-container-exit --exit-code-from test'
                 }
                 sh 'export GID=$(id -g); export UID=$(id -u); docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)" alpine chown -R $UID:$GID .'
-                sh 'docker run --rm -v /tmp/video:/tmp/video -w /tmp alpine chmod -R a+rw video'
-                sh 'docker run --rm -v /tmp/video:/tmp/video -v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)" alpine sh -c "mv /tmp/video/*.mp4 video/"'
+                sh 'docker run --rm -v /tmp/video:/tmp/video:z -w /tmp alpine chmod -R a+rw video'
+                sh 'docker run --rm -v /tmp/video:/tmp/video:z -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" alpine sh -c "cp /tmp/video/*.mp4 video/"'
             }
             post {
                 success {
@@ -40,7 +40,7 @@ pipeline {
             agent {
                 docker {
                     image 'maven:3-jdk-8-alpine'
-                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)"'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)"'
                 }
             }
             steps {
