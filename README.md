@@ -1,19 +1,60 @@
+## SonarQube
+
 Para lanzar SonarQube
 
-> docker run -d --name codeurjc-forge-sonarqube -p 9000:9000 -p 9092:9092 sonarqube:alpine
+```
+[~]$ docker run -d --name codeurjc-forge-sonarqube -p 9000:9000 -p 9092:9092 sonarqube:alpine
+```
 
-OJO! Eso no persiste los datos. Habría que crear un volumen y montarlo en el sitio adecuado, pero en general funciona bien para ir desarrollando la práctica
+Al ejecutar de esta forma sonarqube hacemos que los scripts **stop.sh** y **resume.sh** de la forja paren y arranquen el servicio junto con el resto de la forja.
+
+> **Nota:** Eso no persiste los datos. Habría que crear un volumen y montarlo en el sitio adecuado, pero en general funciona bien para ir desarrollando la práctica
 
 
-Configuración de Archiva:
-Crear usuario jenkins con clave jenkins1 y añadirlo como manejador de los repos internal y snapshot
 
-La configuración de los jobs está en la carpeta jenkins. No he probado a usarlos como Jenkinsfile, pero si se crea el job y se copia el contenido debería funcinar
+## Selenoid
 
-Para Selenoid hay que hacer antes de nada:
-> docker pull selenoid/vnc:chrome_66.0
+Usamos **Selenoid** para hacer las pruebas de **Selenium** y para grabar los vídeos de dichas pruebas, pero para que funcione bien hay que descargarse las imágenes docker de los navegadores a usar y del grabador de vídeos:
 
-> docker pull selenoid/video-recorder:latest
+```
+[~]$ docker pull selenoid/vnc:chrome_66.0
+[~]$ docker pull selenoid/video-recorder:latest
+```
 
-En gerrit hay que importar este proyecto!!!
+Al ejecutar Selenoid dockerizado hay que indicarle un volumen para que guarde los vídeos. Ese volumen debe ser una carpeta del host que ejecuta docker.
+
+En el proyecto usamos la carpeta **/tmp/video**.
+
+> **Nota: La carpeta **/tmp/video** debe ser creada en el host (el sistema linux que ejecuta la forja)
+
+
+## Archiva
+
+
+Crear usuario **jenkins** con clave **jenkins1** y añadirlo como manejador de los repos internal y snapshot.
+
+El fichero de settings de maven que configura Archiva en el proyecto está en **.m2/settings.xml**. No hay que hacer nada para que los jobs lo usen.
+
+En el fichero **pom.xml** se configura el plugin de archiva para que maven pueda desplegar en Archiva.
+
+
+## Jenkins
+
+La configuración de los jobs está en la carpeta **jenkins**.
+
+Se deben crear los jobs en Jenkins como "Pipeline script from SCM"
+- **Repository URL**: ssh://codeurjc-forge-gerrit:29418/TicTacToe
+- **Credentials**: jenkins (Jenkins Master)
+- **Script path**: jenkins/\<type>Jenkinsfile con \<type> un valor de [merge, commit]
+
+
+Hay que modificar los permisos de docker.sock para que Jenkins pueda lanzar contenedores docker
+
+```
+[~]$ sudo chmod a+rw /var/run/docker.sock
+```
+
+## Gerrit
+
+En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
 
