@@ -51,11 +51,11 @@ pipeline {
             agent {
                 docker {
                     image 'maven:3-jdk-8-alpine'
-                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home -v $HOME/.m2:/root/.m2:z -w "$(pwd)" --network=ci-network'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network'
                 }
             }
             steps {
-                sh 'mvn package deploy -Dmaven.test.skip=true'
+                sh 'mvn package deploy -Dmaven.test.skip=true -Duser.home="$(pwd)"'
             }
         }
     }
