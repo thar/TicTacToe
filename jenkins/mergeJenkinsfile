@@ -23,7 +23,7 @@ pipeline {
                 }
                 sh 'export GID=$(id -g); export UID=$(id -u); docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)" alpine chown -R $UID:$GID .'
                 sh 'docker run --rm -v /tmp/video:/tmp/video:z -w /tmp alpine chmod -R a+rw video'
-                sh 'docker run --rm -v /tmp/video:/tmp/video:z -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" alpine sh -c "cp /tmp/video/*.mp4 video/"'
+                sh 'docker run --rm -v /tmp/video:/tmp/video:z -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" alpine sh -c "mkdir -p video && cp /tmp/video/*.mp4 video/"'
             }
             post {
                 success {
