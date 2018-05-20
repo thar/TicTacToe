@@ -58,10 +58,11 @@ pipeline {
                 sh 'mvn package deploy -Dmaven.test.skip=true -Duser.home="$(pwd)"'
             }
         }
-        stage('Create docker image') {
+        stage('Create and publish docker image') {
             agent any
             steps {
                 sh 'docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t thar/tic-tac-toe:dev .'
+                sh 'docker push thar/tic-tac-toe:dev'
             }
         }
     }
