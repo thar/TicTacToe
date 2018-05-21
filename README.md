@@ -1,4 +1,4 @@
-## Prerequisitos de instalación.
+## Prerrequisitos de instalación.
 1. Virtual Box con al menos 20G de disco vdi, caso contrario nos quedaremos sin espacio pronto.
 2. Necesitaremos configurar el modo host only para acceder a los contenedores con una dirección privada. 
 3. Instalar docker CE, seguimos los pasos: https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
