@@ -28,6 +28,15 @@ auto eth1
 iface eth1 inet dhcp
 ```
 
+## URLs
+
+Gerrit                -> http://10.0.2.15:8080
+Jenkins               -> http://10.0.2.15:8181/jenkins
+Archiva               -> http://10.0.2.15:8484
+phpLDAPadmin          -> http://10.0.2.15:8383/phpldapadmin
+Self Service Password -> http://10.0.2.15:8282/ssp
+Apache Service        -> http://10.0.2.15:8585
+
 
 ## SonarQube
 
@@ -85,7 +94,7 @@ Hay que modificar los permisos de docker.sock para que Jenkins pueda lanzar cont
 [~]$ sudo chmod a+rw /var/run/docker.sock
 ```
 
-También hay que instalar docker-compose, que no viene por defecto.
+También hay que instalar docker-compose (en el contenedor de Jenkins), que no viene por defecto.
 Con la forja corriendo:
 
 ```
@@ -96,4 +105,9 @@ root@codeurjc-forge-jenkins$ curl -L https://github.com/docker/compose/releases/
 ## Gerrit
 
 En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
+
+Project/New/
+Project Name : TicTacToe
+Rights Inherit From: awesome-project
+
 
