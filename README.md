@@ -54,6 +54,14 @@ Hay que modificar los permisos de docker.sock para que Jenkins pueda lanzar cont
 [~]$ sudo chmod a+rw /var/run/docker.sock
 ```
 
+También hay que instalar docker-compose, que no viene por defecto.
+Con la forja corriendo:
+
+```
+[~]$ docker exec -ti -u root codeurjc-forge-jenkins bash
+root@codeurjc-forge-jenkins$ curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+```
+
 ## Gerrit
 
 En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
