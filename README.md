@@ -1,3 +1,34 @@
+##Prerequisitos de instalación.
+1. Virtual Box con al menos 20G de disco vdi, caso contrario nos quedaremos sin espacio pronto.
+2. Necesitaremos configurar el modo host only para acceder a los contenedores con una dirección privada. 
+3. Instalar docker CE, seguimos los pasos: https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
+4. Instalar docker-compose https://docs.docker.com/compose/install/ii
+5. Tener corriendo el servicio openssh-server
+
+## Configuración Red en ubuntu 14.04
+* Una vez configurada la opción en Virtual Box para host only con dhcp, hay que modificar el fichero añadiendo el inteface nuevo que hemos obtenido con ifconfig -a:
+Por ejemplo:
+
+```bash
+cd /etc/network/interfaces
+
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+iface eth0 inet dhcp
+
+# The secondary network interface
+auto eth1
+iface eth1 inet dhcp
+```
+
+
 ## SonarQube
 
 Para lanzar SonarQube
