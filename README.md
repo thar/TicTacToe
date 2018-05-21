@@ -52,6 +52,33 @@ Al nombrar la imagen de esta forma sonarqube hacemos que los scripts **stop.sh**
 
 > **Nota:** Eso no persiste los datos. Habría que crear un volumen para tal efecto, pero para el desarrollo de la práctica no es absolutamente necesario, siempre y cuando no borremos los contenedores.
 
+## Gerrit
+
+En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
+
+Project/New/
+Project Name : TicTacToe
+Rights Inherit From: awesome-project
+
+
+Una vez importado copiamos el proyecto desde el directorio donde tengamos los fuentes a este directorio.
+
+Configuramos directorio para incluir información sobre el changeId necesario para hacer revisión de código en Gerrit:
+
+```bash
+~/test/TicTacToe$ gitdir=$(git rev-parse --git-dir); scp -p -P 29418 dev1@localhost:hooks/commit-msg ${gitdir}/hooks/
+commit-msg                                                                                                                                                                      100% 4780     4.7KB/s   00:00
+~/test/TicTacToe$ chmod +x .git/hooks/commit-msg
+```
+
+Subimos el proyecto con todos los ficheros y directorios a Gerrit.
+```bash
+git add .
+git commit -m "initial commit"
+git push origin HEAD:refs/for/master
+```
+Una vez hecho esto, si entramos en gerrit con el usuario dev2 tendremos la opción de revisar cambios y votarlos(+1). Si entramos con el usuario admin podremos directamente aprobar el merge (+2).
+
 ## Archiva
 
 El servicio de **Archiva** ya está en ejecución en la forja. Las credenciales de administrador son las mismas que Jenkins:
@@ -88,14 +115,6 @@ En el proyecto usamos la carpeta **/tmp/video**.
 Para poder lanzar el System Test se ha preparado un fichero para **docker-compose**, el fichero ** 	system-test-docker-compose.yml** que lanza **Selenoid** y un contenedor Maven que ejecutará los tests usando dicho **Selenoid**.
 
 Estos servicios se han de ejecutar usando el modo bridge de **docker-compose**, pues la imagen de **Selenoid** lanzará nuevos contenedores para cada uno de los browsers que se necesiten usar mediante comandos de **docker run** y dichos contenedores deben de estar en la misma red que el contenedor de **Selenoid**.
-
-## Gerrit
-
-En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
-
-Project/New/
-Project Name : TicTacToe
-Rights Inherit From: awesome-project
 
 ## Jenkins
 
