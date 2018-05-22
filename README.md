@@ -186,3 +186,8 @@ Una vez realizados estos pasos es posible mandar commits a GerritHub y nuestro s
 
 Para poder usar indistintamente el servidor local de Gerrit y GerritHub se han modificado los Jenkinsfile de forma que ahora comprueban el origen del cambio y usan los credenciales creados para gerrithub o el de jenkins-master de forma adecuada para poder hacer un checkout del código
 
+
+#Problemas encontrados
+
+- Muy complicado correr la forja en portátiles sin la capacidad suficiente de disco duro y memoria RAM. Hemos obtenido mensajes de error de Virtual Box en muchas ocasiones mientras estábamos trabajando con la forja. Teniendo que volver a ejecutar la máquina virtual, ejecutar de nuevo ./resume.sh , etc.
+
