@@ -1,8 +1,28 @@
 pipeline {
     agent none 
     stages {
+        stage('Checkout from GerritHub') {
+            agent any
+            when {
+                expression { params.GERRIT_HOST == 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_REFSPEC"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'gerrithub-jenkins', \
+              refspec: 'refs/changes/*:refs/changes/*', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
         stage('Checkout') {
             agent any 
+            when {
+                expression { params.GERRIT_HOST != 'review.gerrithub.io' }
+            }
             steps {
               checkout poll: false, \
               scm: [$class: 'GitSCM', \
