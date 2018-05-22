@@ -39,11 +39,11 @@ pipeline {
             agent {
                 docker {
                     image 'maven:3-jdk-8-alpine'
-                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)"'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)"'
                 }
             }
             steps {
-                sh 'mvn -Dtest=BoardTest,TicTacToeGameTest test'
+                sh 'mvn -Dtest=BoardTest,TicTacToeGameTest -Duser.home="$(pwd)" test'
             }
             post {
                 success {
