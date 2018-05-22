@@ -81,6 +81,14 @@ Una vez aplicados estos cambios ya podremos clonar el repositorio recién creado
 git clone ssh://<username>@<gerrit-ip>:29418/TicTacToe && scp -p -P 29418 <username>@<gerrit-ip>:hooks/commit-msg TicTacToe/.git/hooks/
 ```
 
+Importante configurar el directorio para introducir siempre en todo commit un changeId :
+
+```bash
+gitdir=$(git rev-parse --git-dir); scp -p -P 29418 dev1@localhost:hooks/commit-msg ${gitdir}/hooks/
+chmod +x .git/hooks/commit-msg
+```
+
+
 Añadimos el remote de github, descargamos el código desde github y publicamos en Gerrit:
 ```bash
 git remote add github   https://github.com/thar/TicTacToe.git
@@ -187,7 +195,7 @@ Una vez realizados estos pasos es posible mandar commits a GerritHub y nuestro s
 Para poder usar indistintamente el servidor local de Gerrit y GerritHub se han modificado los Jenkinsfile de forma que ahora comprueban el origen del cambio y usan los credenciales creados para gerrithub o el de jenkins-master de forma adecuada para poder hacer un checkout del código
 
 
-#Problemas encontrados
+# Problemas encontrados
 
 - Muy complicado correr la forja en portátiles sin la capacidad suficiente de disco duro y memoria RAM. Hemos obtenido mensajes de error de Virtual Box en muchas ocasiones mientras estábamos trabajando con la forja. Teniendo que volver a ejecutar la máquina virtual, ejecutar de nuevo ./resume.sh , etc.
-
+- Problemas con Jenkins y repositorios. En alguna ejecución de los jobs, Jenkins ha dado un error de corrupción de objetos en el .git del job. Ha sido necesario entrar dentro del contenedor de Jenkins para borrar manualmente el job en el workspace correspondiente. /var/jenkins_home/workspace/jobCommit, etc. Una vez borrados estos jobs del Workspace todo ha vuelto a funcionar.
