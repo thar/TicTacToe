@@ -32,12 +32,12 @@ iface eth1 inet dhcp
 
 ## URLs
 
-Gerrit                -> http://10.0.2.15:8080
-Jenkins               -> http://10.0.2.15:8181/jenkins
-Archiva               -> http://10.0.2.15:8484
-phpLDAPadmin          -> http://10.0.2.15:8383/phpldapadmin
-Self Service Password -> http://10.0.2.15:8282/ssp
-Apache Service        -> http://10.0.2.15:8585
+- Gerrit                -> http://10.0.2.15:8080
+- Jenkins               -> http://10.0.2.15:8181/jenkins
+- Archiva               -> http://10.0.2.15:8484
+- phpLDAPadmin          -> http://10.0.2.15:8383/phpldapadmin
+- Self Service Password -> http://10.0.2.15:8282/ssp
+- Apache Service        -> http://10.0.2.15:8585
 
 
 ## Instalación y configuración de SonarQube
@@ -54,30 +54,47 @@ Al nombrar la imagen de esta forma sonarqube hacemos que los scripts **stop.sh**
 
 ## Gerrit
 
-En gerrit hay que crear el proyecto como **TicTacToe** e importarlo desde este
+En gerrit hay que crear el proyecto como **TicTacToe**
 
+```
 Project/New/
 Project Name : TicTacToe
-Rights Inherit From: awesome-project
-
-
-Una vez importado copiamos el proyecto desde el directorio donde tengamos los fuentes a este directorio.
-
-Configuramos directorio para incluir información sobre el changeId necesario para hacer revisión de código en Gerrit:
-
-```bash
-~/test/TicTacToe$ gitdir=$(git rev-parse --git-dir); scp -p -P 29418 dev1@localhost:hooks/commit-msg ${gitdir}/hooks/
-commit-msg                                                                                                                                                                      100% 4780     4.7KB/s   00:00
-~/test/TicTacToe$ chmod +x .git/hooks/commit-msg
+Rights Inherit From: All-Projects
 ```
 
-Subimos el proyecto con todos los ficheros y directorios a Gerrit.
+Para poder importar el proyecto de GitHub en Gerrit hay que hacer algunos cambios en la configuración del proyecto **TicTacToe** o en la de **All-Projects**
+
+En la sección **Reference: refs/heads** hay que añadir el grupo **Developers** a los permisos que no tenga, pero especialmente a los permisos:
+
+- Forge Author Identity
+- Forge Committer Identity
+
+Esto nos permitirá poder crear los parches de los commits que se ha hecho directamente al repositorio de github con usuarios no existentes en la forja.
+
+También será necesario cambiar la opción **Require Change-Id in commit message:** de la pestaña **General** de configuración del proyecto de INHERIT a FALSE. Esto es necesario porque hay commits en el proyecto que no tienen **Change-Id**.
+
+Una vez aplicados estos cambios ya podremos clonar el repositorio recién creado en nuestra máquina. Para ello se seguirán las instrucciones ya vistas en el **Tema 6 - Git avanzado - Code Review con Gerrit**
+
+> **Nota:** Es posible que sea necesario crear algún usuario en el servidor **LDAP**
+
 ```bash
-git add .
-git commit -m "initial commit"
+git clone ssh://<username>@<gerrit-ip>:29418/TicTacToe && scp -p -P 29418 <username>@<gerrit-ip>:hooks/commit-msg TicTacToe/.git/hooks/
+```
+
+Añadimos el remote de github, descargamos el código desde github y publicamos en Gerrit:
+```bash
+git remote add github   https://github.com/thar/TicTacToe.git
+git pull --rebase github master
 git push origin HEAD:refs/for/master
 ```
-Una vez hecho esto, si entramos en gerrit con el usuario dev2 tendremos la opción de revisar cambios y votarlos(+1). Si entramos con el usuario admin podremos directamente aprobar el merge (+2).
+
+Una vez hecho esto, si entramos en gerrit con el usuario <username> tendremos la opción de revisar cambios y votarlos(+1). Si entramos con el usuario admin podremos directamente aprobar el merge (+2).
+
+Con el código de github ya importado podemos deshacer los cambios realizados en la configuración del proyecto, más específicamente:
+
+- **Require Change-Id in commit message:**: De FALSE a INHERIT
+- **Forge Author Identity**: Eliminar el grupo **Developers**
+- **Forge Committer Identity**: Eliminar el grupo **Developers**
 
 ## Archiva
 
