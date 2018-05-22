@@ -167,5 +167,22 @@ Cada job tendrá sus propios triggers.
 
 ### Job de release
 
+## Integración con GitHub y GerritHub
 
+Se ha preparado el proyecto para que se pueda evitar el uso del **Gerrit** de la forja y en su lugar se use como repositorio de código **GitHub** y como enlace con **Jenkins** y sistema de revisión de código **GerritHub**.
+
+Para poder hacer esto son necesarios los siguiente pasos:
+
+- Crear el repositorio en GitHub
+- Importar el proyecto a GerritHub
+- Crear un usuario de github que hará las veces de usuario funcional de Jenkins de cara a GerritHub
+- Enlazar el nuevo usuario en la página de GerritHub y añadir la clave SSH del usuario jenkins del contenedor codeurjc-forge-jenkins
+- En la configuración del proyecto en GerritHub hay que dar permiso al nuevo usuario creado para que pueda votar
+- Crear un nuevo credencial para el usuario funcional de Jenkins que acabamos de crear usando como nombre de usuario el del usuario de GitHub que hemos creado y como fichero SSH el que ya existe por defecto en el home del contenedor Jenkins
+- Crear un nuevo servidor de Gerrit en nuestro servidor de Jenkins usando los credenciales recien creados
+- En la configuración del proyecto en GerritHub hay que dar permiso al nuevo usuario creado para que pueda votar
+
+Una vez realizados estos pasos es posible mandar commits a GerritHub y nuestro servidor de Jenkins ejecutará los test que configuremos para dicho repositorio y podrá votar en el proceso de code-review
+
+Para poder usar indistintamente el servidor local de Gerrit y GerritHub se han modificado los Jenkinsfile de forma que ahora comprueban el origen del cambio y usan los credenciales creados para gerrithub o el de jenkins-master de forma adecuada para poder hacer un checkout del código
 
