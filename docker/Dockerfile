@@ -7,6 +7,6 @@ ARG COMMIT_DATE=unspecified
 LABEL commit_date=$COMMIT_DATE
 
 COPY target/*.jar /usr/app/app.jar
-WORKDIR /us/app
+WORKDIR /usr/app
 ENTRYPOINT ["java", "-jar", "/usr/app/app.jar"]
 
