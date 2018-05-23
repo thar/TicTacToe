@@ -1,6 +1,8 @@
 package es.codeurjc.ais.tictactoe;
 
 import java.net.URL;
+import java.net.*;
+import java.io.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +26,16 @@ public class TicTacToeSystemTest {
     private WebDriver browser2;
     private String ownIp;
 
+    public static String getIp( String hostname ) throws IOException {
+        try {
+            InetAddress ipaddress = InetAddress.getByName(hostname);
+            return ipaddress.getHostAddress();
+        }
+        catch ( UnknownHostException e ){
+            throw new IOException("Could not find IP address for: " + hostname);
+        }
+    }
+
     @BeforeClass
     public static void setupClass() {
         if (null == System.getenv("APP_HOST")) {
@@ -41,14 +53,16 @@ public class TicTacToeSystemTest {
     @Before
     public void setupTest() throws Exception {
         if (null != System.getenv("APP_HOST")) {
-            ownIp = System.getenv("APP_HOST") + ":" + System.getenv("APP_PORT");
+            ownIp = getIp(System.getenv("APP_HOST")) + ":" + System.getenv("APP_PORT");
         } else {
             ownIp = new NetworkUtils().getIp4NonLoopbackAddressOfThisMachine().getHostAddress() + ":8080";
         }
+
         DesiredCapabilities capability_browser1 = DesiredCapabilities.chrome();
         if (null != System.getenv("ENABLE_VIDEO_RECORDING")) {
             capability_browser1.setCapability("enableVideo", true);
         }
+
         DesiredCapabilities capability_browser2 = DesiredCapabilities.chrome();
         browser1 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser1);
         browser2 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser2);
