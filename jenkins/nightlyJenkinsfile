@@ -1,0 +1,73 @@
+pipeline {
+    agent none 
+    stages {
+        stage('Checkout from GerritHub') {
+            agent any
+            when {
+                expression { params.GERRIT_HOST == 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_NEWREV"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'gerrithub-jenkins', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Checkout') {
+            agent any 
+            when {
+                expression { params.GERRIT_HOST != 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "master"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'jenkins-master', \
+              url: "ssh://codeurjc-forge-gerrit:29418/TicTacToe"]]]
+            }
+        }       
+        stage('Unit Testing') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)"'
+                }
+            }
+            steps {
+                sh 'mvn -Dtest=BoardTest,TicTacToeGameTest -Duser.home="$(pwd)" test'
+            }
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                }
+            }
+        }
+        stage('System Tests') {
+            agent any
+            steps {
+                withEnv(['ENABLE_VIDEO_RECORDING=0']) {
+                    sh 'docker-compose -f system-test-docker-compose-nightly.yml up --abort-on-container-exit --exit-code-from test'
+                }
+            }
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                }
+            }
+        }
+        stage('Build Docker Container') {
+            agent any
+            steps {
+                    sh 'sudo docker build -f Dockerfile.1 -t albm/java-tictactoe .'
+            }
+        }
+    }
+}
+
