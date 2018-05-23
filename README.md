@@ -148,6 +148,7 @@ Con la forja corriendo:
 ```bash
 docker exec -ti -u root codeurjc-forge-jenkins bash
 root@codeurjc-forge-jenkins$ curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+chmod a+x /usr/local/bin/docker-compose
 ```
 
 La configuración de los diferentes jobs está en la carpeta **jenkins**.
@@ -343,6 +344,9 @@ pipeline {
 
 ### Job de nighly
 
+#### Diferencia respecto a los anteriores Jobs
+
+El job de nightly no se dispara por un evento en gerrit, se dispara por medio de un 'scheduler' y por lo tanto le tenemos que proporcionar los parámetros con los que conectarse al repo de gerrit.
 #### Trigger
 
 El trigger es **Build periodically** con los siguientes parámetros:
