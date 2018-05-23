@@ -42,13 +42,9 @@ pipeline {
                 script {
                     DAY_TAG = sh(returnStdout: true, script: "date +%Y%m%d").trim()
                     APP_VERSION = sh(returnStdout: true, script: 'python -c "import xml.etree.ElementTree as ET; print(ET.parse(open(\'pom.xml\')).getroot().find(\'{http://maven.apache.org/POM/4.0.0}version\').text)"').trim()
-                    echo "${DAY_TAG}"
-                    echo "${APP_VERSION}"
                     DOCKER_TAG = "${APP_VERSION}" + ".nightly." + "${DAY_TAG}"
                 }
                 sh '''#!/bin/bash
-                  APP_VERSION=$(python -c "import xml.etree.ElementTree as ET; print(ET.parse(open('pom.xml')).getroot().find('{http://maven.apache.org/POM/4.0.0}version').text)")
-                  DOCKER_TAG=$APP_VERSION.nightly.$(date +%Y%m%d)
                   docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t ${DOCKER_USERNAME}/tic-tac-toe:${DOCKER_TAG} .
                   docker-compose -f system-test-docker-compose.yml -f system-test-docker-compose.override.yml up --abort-on-container-exit --exit-code-from test
                 '''

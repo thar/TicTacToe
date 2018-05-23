@@ -438,20 +438,66 @@ En el campo **Name** pondremos **NEW_VERSION**
 
 #### Trigger
 
-El trigger es **Patchset created** con los siguientes parámetros:
-
-- **Gerrit Project**: TicTacToe
-- **Type**: Path
-- **Pattern**: \*\*
+El trigger es manual, por lo que no hay que setear nada
 
 #### Pipeline
 
-El contenido de **jenkins/commitJenkinsfile** es el siguiente:
+El contenido de **jenkins/releaseJenkinsfile_v0.1** es el siguiente:
 
 ```
+pipeline {
+    agent none
+
+    environment {
+        DOCKER_USERNAME = "thar"
+        GERRIT_SCHEME = "ssh"
+        GERRIT_HOST = "review.gerrithub.io"
+        GERRIT_PORT = 29418
+        GERRIT_PROJECT = "thar/TicTacToe"
+        GERRIT_BRANCH = "master"
+        CREDENTIALS = "gerrithub-jenkins"
+    }
+    
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_BRANCH"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: "$CREDENTIALS", \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('remove SNAPSHOT version and test') {
+            agent any 
+            steps {
+                script {
+                    env.APP_VERSION = sh(returnStdout: true, script: 'python -c "import xml.etree.ElementTree as ET; print(ET.parse(open(\'pom.xml\')).getroot().find(\'{http://maven.apache.org/POM/4.0.0}version\').text)"').trim()
+                    env.APP_VERSION = env.APP_VERSION.split('-')[0]
+                    sh 'docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network maven:3-jdk-8-alpine mvn versions:set -DnewVersion=${APP_VERSION} -f pom.xml -Duser.home="$(pwd)"'
+                    sh 'docker-compose -f system-test-docker-compose.yml up --abort-on-container-exit --exit-code-from test'
+                    junit 'target/surefire-reports/**/*.xml'
+                    sh 'docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network maven:3-jdk-8-alpine mvn package deploy -Dmaven.test.skip=true -Duser.home="$(pwd)"'
+                    sh '''#!/bin/bash
+                        docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION} .
+                    '''
+                    sh 'docker tag ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION} ${DOCKER_USERNAME}/tic-tac-toe:latest'
+                    sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:latest'
+                    sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION}'
+                    // TODO: TAG
+                    env.NEW_VERSION = env.NEW_VERSION.split('-')[0] + '-SNAPSHOT'
+                    sh 'docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network maven:3-jdk-8-alpine mvn versions:set -DnewVersion=${NEW_VERSION} -f pom.xml -Duser.home="$(pwd)"'
+                    // TODO: publish commit
+                }
+            }
+        }
+    }
+}
 ```
-
-
 
 ## Integración con GitHub y GerritHub
 
