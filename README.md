@@ -161,11 +161,293 @@ Cada job tendrá sus propios triggers.
 
 ### Job de commit
 
+#### Trigger
+
+El trigger es **Patchset created** con los siguientes parámetros:
+
+- **Gerrit Project**: TicTacToe
+- **Type**: Path
+- **Pattern**: \*\*
+
+#### Pipeline
+
+El contenido de **jenkins/commitJenkinsfile** es el siguiente:
+
+```
+pipeline {
+    agent none 
+    stages {
+        stage('Checkout from GerritHub') {
+            agent any
+            when {
+                expression { params.GERRIT_HOST == 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_REFSPEC"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'gerrithub-jenkins', \
+              refspec: 'refs/changes/*:refs/changes/*', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Checkout') {
+            agent any 
+            when {
+                expression { params.GERRIT_HOST != 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_REFSPEC"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'jenkins-master', \
+              refspec: 'refs/changes/*:refs/changes/*', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Test') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)"'
+                }
+            }
+            steps {
+                sh 'mvn -Dtest=BoardTest,TicTacToeGameTest -Duser.home="$(pwd)" test'
+            }
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                }
+            }
+        }
+    }
+}
+```
+
+
 ### Job de merge
 
-### Jon de nighly
+#### Trigger
+
+El trigger es **Ref Updated** con los siguientes parámetros:
+
+- **Gerrit Project**: TicTacToe
+- **Type**: Path
+- **Pattern**: master
+
+#### Pipeline
+
+El contenido de **jenkins/mergeJenkinsfile** es el siguiente:
+
+```
+pipeline {
+    agent none 
+    environment {
+        DOCKER_USERNAME = "thar" //Cambiar a ususario local de docker
+    }
+    stages {
+        stage('Checkout from GerritHub') {
+            agent any
+            when {
+                expression { params.GERRIT_HOST == 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_NEWREV"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'gerrithub-jenkins', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Checkout') {
+            agent any 
+            when {
+                expression { params.GERRIT_HOST != 'review.gerrithub.io' }
+            }
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_NEWREV"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: 'jenkins-master', \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Test with video recording') {
+            agent any
+            steps {
+                sh 'docker run --rm -v /tmp/video:/tmp/video alpine sh -c "rm /tmp/video/*.mp4 || true"'
+                withEnv(['ENABLE_VIDEO_RECORDING=1']) {
+                    sh 'docker-compose -f system-test-docker-compose.yml up --abort-on-container-exit --exit-code-from test'
+                }
+                sh 'export GID=$(id -g); export UID=$(id -u); docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home -w "$(pwd)" alpine chown -R $UID:$GID .'
+                sh 'docker run --rm -v /tmp/video:/tmp/video:z -w /tmp alpine chmod -R a+rw video'
+                sh 'docker run --rm -v /tmp/video:/tmp/video:z -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" alpine sh -c "mkdir -p video && cp /tmp/video/*.mp4 video/"'
+            }
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                    archiveArtifacts artifacts: 'video/*.mp4', onlyIfSuccessful: true
+                }
+                cleanup {
+                    sh 'docker run --rm -v /tmp/video:/tmp/video alpine sh -c "rm /tmp/video/*.mp4 || true"'
+                    sh 'rm video/*.mp4 || true'
+                }
+            }
+        }
+        stage('Analyze code and publish in SonarQube') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)"'
+                }
+            }
+            steps {
+                sh 'mvn sonar:sonar -Dsonar.host.url=http://172.17.0.2:9000 -Duser.home="$(pwd)"'
+            }
+        }
+        stage('Create and deploy package') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network'
+                }
+            }
+            steps {
+                sh 'mvn package deploy -Dmaven.test.skip=true -Duser.home="$(pwd)"'
+            }
+        }
+        stage('Create and publish docker image') {
+            agent any
+            steps {
+                sh 'docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t thar/tic-tac-toe:dev .'
+                sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:dev'
+            }
+        }
+    }
+}
+
+```
+
+### Job de nighly
+
+#### Trigger
+
+El trigger es **Build periodically** con los siguientes parámetros:
+
+- **Schedule**: "H 4 \* \* \*"
+
+#### Pipeline
+
+El contenido de **jenkins/nightlyJenkinsfile_v0.1** es el siguiente:
+
+```
+pipeline {
+    agent none
+
+    environment {
+        DOCKER_USERNAME = "thar" // cambiar a ususario local de Docker
+        GERRIT_SCHEME = "ssh"
+        GERRIT_HOST = "review.gerrithub.io" // cambiar a host de gerrit local
+        GERRIT_PORT = 29418
+        GERRIT_PROJECT = "thar/TicTacToe"   // si se usa gerrit local cambiar a "TicTacToe"
+        GERRIT_BRANCH = "master"
+        CREDENTIALS = "gerrithub-jenkins"   // si se usa gerrit local cambiar a "jenkins-master"
+    }
+    
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+              checkout poll: false, \
+              scm: [$class: 'GitSCM', \
+              branches: [[name: "$GERRIT_BRANCH"]], \
+              doGenerateSubmoduleConfigurations: false, \
+              extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+              submoduleCfg: [], \
+              userRemoteConfigs: [[credentialsId: "$CREDENTIALS", \
+              url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+            }
+        }
+        stage('Create package') {
+            agent {
+                docker {
+                    image 'maven:3-jdk-8-alpine'
+                    args  '-v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network'
+                }   
+            }   
+            steps {
+                sh 'mvn package -Dmaven.test.skip=true -Duser.home="$(pwd)"'
+            }   
+        }
+        stage('Test Docker image and publish') {
+            agent any
+            steps {
+                script {
+                    DAY_TAG = sh(returnStdout: true, script: "date +%Y%m%d").trim()
+                    APP_VERSION = sh(returnStdout: true, script: 'python -c "import xml.etree.ElementTree as ET; print(ET.parse(open(\'pom.xml\')).getroot().find(\'{http://maven.apache.org/POM/4.0.0}version\').text)"').trim()
+                    echo "${DAY_TAG}"
+                    echo "${APP_VERSION}"
+                    DOCKER_TAG = "${APP_VERSION}" + ".nightly." + "${DAY_TAG}"
+                }
+                sh '''#!/bin/bash
+                  APP_VERSION=$(python -c "import xml.etree.ElementTree as ET; print(ET.parse(open('pom.xml')).getroot().find('{http://maven.apache.org/POM/4.0.0}version').text)")
+                  DOCKER_TAG=$APP_VERSION.nightly.$(date +%Y%m%d)
+                  docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t ${DOCKER_USERNAME}/tic-tac-toe:${DOCKER_TAG} .
+                  docker-compose -f system-test-docker-compose.yml -f system-test-docker-compose.override.yml up --abort-on-container-exit --exit-code-from test
+                '''
+            }  
+            post {
+                success {
+                    junit 'target/surefire-reports/**/*.xml'
+                    sh 'docker tag ${DOCKER_USERNAME}/tic-tac-toe:${DOCKER_TAG} ${DOCKER_USERNAME}/tic-tac-toe:nightly'
+                    sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:nightly'
+                }   
+            }
+        }
+    }
+}
+
+```
 
 ### Job de release
+
+#### Parametros
+
+Es necesario indicar que el job es parametrizado. Esto se hace marcando la opción **This project is parameterised** en la sección **General**
+
+Se debe añadir un parámetro de tipo **String Parameter**.
+
+En el campo **Name** pondremos **NEW_VERSION**
+
+#### Trigger
+
+El trigger es **Patchset created** con los siguientes parámetros:
+
+- **Gerrit Project**: TicTacToe
+- **Type**: Path
+- **Pattern**: \*\*
+
+#### Pipeline
+
+El contenido de **jenkins/commitJenkinsfile** es el siguiente:
+
+```
+```
+
+
 
 ## Integración con GitHub y GerritHub
 
