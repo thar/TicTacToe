@@ -12,7 +12,7 @@ services:
       - APP_HOST=app
       - APP_PORT=8080
   app:
-    image: "thar/tic-tac-toe:dev"
+    image: "${DOCKER_USERNAME}/tic-tac-toe:${DOCKER_TAG}"
     network_mode: bridge
 
 
