@@ -6,8 +6,6 @@
 3. Instalar docker CE, seguimos los pasos: https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
 4. Instalar docker-compose https://docs.docker.com/compose/install/ii
 5. Tener corriendo el servicio openssh-server
-6.
-7.
 
 ## Configuración Red en ubuntu 14.04
 * Una vez configurada la opción en Virtual Box para host only con dhcp, hay que modificar el fichero añadiendo el inteface nuevo que hemos obtenido con ifconfig -a:
