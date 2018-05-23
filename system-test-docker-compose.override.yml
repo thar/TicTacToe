@@ -1,0 +1,18 @@
+version: '3'
+services:
+  selenoid:
+    links:
+      - app
+  test:
+    links:
+      - selenoid
+      - app
+    environment:
+      - ENABLE_VIDEO_RECORDING
+      - APP_HOST=app
+      - APP_PORT=8080
+  app:
+    image: "thar/tic-tac-toe:dev"
+    network_mode: bridge
+
+
