@@ -1,0 +1,28 @@
+version: '3'
+services:
+  selenoid:
+    image: "aerokube/selenoid"
+    network_mode: bridge
+    ports:
+      - "4444:4444"
+    volumes:
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home:z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: ["-conf", "$PWD/config/browsers-no-video.json", "-service-startup-timeout", "90s", "-session-attempt-timeout", "90s", "-session-delete-timeout", "90s", "-timeout", "90s"]
+  test:
+    image: "maven:3-jdk-8-alpine"
+    network_mode: bridge
+    links:
+      - selenoid
+    working_dir: "$PWD"
+    volumes:
+      - "codeurjc-forge-jenkins-volume:/var/jenkins_home:z"
+    environment:
+      - APP_HOST
+      - APP_PORT
+    command: ["mvn", "test", "-Duser.home=$PWD"]
+
+volumes:
+  codeurjc-forge-jenkins-volume:
+    external: true
+
