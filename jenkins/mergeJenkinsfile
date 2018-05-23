@@ -1,5 +1,8 @@
 pipeline {
     agent none 
+    environment {
+        DOCKER_USERNAME = "thar" //Cambiar a ususario local de docker
+    }
     stages {
         stage('Checkout from GerritHub') {
             agent any
@@ -81,7 +84,7 @@ pipeline {
             agent any
             steps {
                 sh 'docker build --build-arg GIT_COMMIT=\$(git rev-parse HEAD) --build-arg COMMIT_DATE=\$(git log -1 --format=%cd --date=format:%Y-%m-%dT%H:%M:%S) -f docker/Dockerfile -t thar/tic-tac-toe:dev .'
-                sh 'docker push thar/tic-tac-toe:dev'
+                sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:dev'
             }
         }
     }
