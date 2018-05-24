@@ -127,9 +127,9 @@ Al ejecutar Selenoid dockerizado hay que indicarle un volumen para que guarde lo
 
 En el proyecto usamos la carpeta **/tmp/video**.
 
-> **Nota: La carpeta **/tmp/video** debe ser creada en el host (el sistema linux que ejecuta la forja)
+> **Nota**: La carpeta **/tmp/video** debe ser creada en el host (el sistema linux que ejecuta la forja)
 
-Para poder lanzar el System Test se ha preparado un fichero para **docker-compose**, el fichero ** 	system-test-docker-compose.yml** que lanza **Selenoid** y un contenedor Maven que ejecutará los tests usando dicho **Selenoid**.
+Para poder lanzar el System Test se ha preparado un fichero para **docker-compose**, el fichero **system-test-docker-compose.yml** que lanza **Selenoid** y un contenedor Maven que ejecutará los tests usando dicho **Selenoid**.
 
 Estos servicios se han de ejecutar usando el modo bridge de **docker-compose**, pues la imagen de **Selenoid** lanzará nuevos contenedores para cada uno de los browsers que se necesiten usar mediante comandos de **docker run** y dichos contenedores deben de estar en la misma red que el contenedor de **Selenoid**.
 
