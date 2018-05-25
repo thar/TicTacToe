@@ -23,6 +23,7 @@ pipeline {
               submoduleCfg: [], \
               userRemoteConfigs: [[credentialsId: "$CREDENTIALS", \
               url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+              sh "scp -p -P ${GERRIT_PORT} ${GERRIT_HOST}:hooks/commit-msg .git/hooks/"
             }
         }
         stage('remove SNAPSHOT version and test') {
@@ -41,13 +42,19 @@ pipeline {
                     sh 'docker tag ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION} ${DOCKER_USERNAME}/tic-tac-toe:latest'
                     sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:latest'
                     sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION}'
-                    // TODO: TAG
+                    sh '''#!/bin/bash
+                      git tag -am "${APP_VERSION} tag" ${APP_VERSION}
+                      git push origin ${APP_VERSION} HEAD:refs/heads/master
+                    '''
                     env.NEW_VERSION = env.NEW_VERSION.split('-')[0] + '-SNAPSHOT'
                     sh 'docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network maven:3-jdk-8-alpine mvn versions:set -DnewVersion=${NEW_VERSION} -f pom.xml -Duser.home="$(pwd)"'
-                    // TODO: publish commit
+                    sh '''#!/bin/bash
+                      git add pom.xml
+                      git commit -m "Update version to ${NEW_VERSION}
+                      git push origin HEAD:refs/for/master
+                    '''
                 }
             }
         }
     }
 }
-

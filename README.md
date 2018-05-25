@@ -133,6 +133,52 @@ Para poder lanzar el System Test se ha preparado un fichero para **docker-compos
 
 Estos servicios se han de ejecutar usando el modo bridge de **docker-compose**, pues la imagen de **Selenoid** lanzará nuevos contenedores para cada uno de los browsers que se necesiten usar mediante comandos de **docker run** y dichos contenedores deben de estar en la misma red que el contenedor de **Selenoid**.
 
+En el docker file se establecen unas variables de entorno que modifican el comportamiento de los tests.
+
+- ENABLE_VIDEO_RECORDING
+- APP_HOST
+- APP_PORT
+
+Si la variable APP_HOST no se establece, los test de la aplicación lanzarán antes, en el mismo contendor la aplicación, y cuando terminen, pararán dicha aplicación. Esto se hace así para tratar el caso en el que se quiera testear la imagen docker que contiene la aplicación y se quieran lanzar los tests contra dicho contenedor (Nightly building).
+
+```java
+@BeforeClass
+    public static void setupClass() {
+        if (null == System.getenv("APP_HOST")) {
+            WebApp.start();
+        }
+    }
+ 
+    @AfterClass
+    public static void teardownClass() {
+        if (null == System.getenv("APP_HOST")) {
+            WebApp.stop();
+        }
+    }
+```
+
+De la misma manera se ejecutará un set up general de todos los test de sistema para asegurar que la IP a la que se refieren del servicio es la propia del contenedor.
+
+```java
+@Before
+    public void setupTest() throws Exception {
+        if (null != System.getenv("APP_HOST")) {
+            ownIp = getIp(System.getenv("APP_HOST")) + ":" + System.getenv("APP_PORT");
+        } else {
+            ownIp = new NetworkUtils().getIp4NonLoopbackAddressOfThisMachine().getHostAddress() + ":8080";
+        }
+ 
+        DesiredCapabilities capability_browser1 = DesiredCapabilities.chrome();
+        if (null != System.getenv("ENABLE_VIDEO_RECORDING")) {
+            capability_browser1.setCapability("enableVideo", true);
+        }
+ 
+        DesiredCapabilities capability_browser2 = DesiredCapabilities.chrome();
+        browser1 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser1);
+        browser2 = new RemoteWebDriver(new URL("http://selenoid:4444/wd/hub"), capability_browser2);
+    }
+```
+
 ## Jenkins
 
 Debido a que el contenedor de **Jenkins** hace uso del usuario **jenkis**, que es diferente que el usuario del host, existen problemas a la hora de lanzar imágenes Docker desde el contenedor **Jenkins**. Para evitar estos problemas ha que modificar los permisos de docker.sock para que Jenkins pueda lanzar contenedores docker.
@@ -149,6 +195,16 @@ Con la forja corriendo:
 docker exec -ti -u root codeurjc-forge-jenkins bash
 root@codeurjc-forge-jenkins$ curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
 chmod a+x /usr/local/bin/docker-compose
+```
+
+Para que **Jenkins** pueda enviar commits y tags a **Gerrit** es necesario configurar el usuario y email de git que se usará en los comandos de **git**.
+
+Con la forja corriendo:
+
+```bash
+docker exec -ti codeurjc-forge-jenkins bash
+jenkins@codeurjc-forge-jenkins$ git config --global user.email "jenkins@example.com"
+jenkins@codeurjc-forge-jenkins$ git config --global user.name "Jenkins"
 ```
 
 La configuración de los diferentes jobs está en la carpeta **jenkins**.
@@ -353,6 +409,8 @@ El trigger es **Build periodically** con los siguientes parámetros:
 
 - **Schedule**: "H 4 \* \* \*"
 
+Esto ejecutará el job aproximadamente a las 4 de la mañana.
+
 #### Pipeline
 
 El contenido de **jenkins/nightlyJenkinsfile_v0.1** es el siguiente:
@@ -470,6 +528,7 @@ pipeline {
               submoduleCfg: [], \
               userRemoteConfigs: [[credentialsId: "$CREDENTIALS", \
               url: "$GERRIT_SCHEME://$GERRIT_HOST:$GERRIT_PORT/$GERRIT_PROJECT"]]]
+              sh "scp -p -P ${GERRIT_PORT} ${GERRIT_HOST}:hooks/commit-msg .git/hooks/"
             }
         }
         stage('remove SNAPSHOT version and test') {
@@ -488,10 +547,17 @@ pipeline {
                     sh 'docker tag ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION} ${DOCKER_USERNAME}/tic-tac-toe:latest'
                     sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:latest'
                     sh 'docker push ${DOCKER_USERNAME}/tic-tac-toe:${APP_VERSION}'
-                    // TODO: TAG
+                    sh '''#!/bin/bash
+                      git tag -am "${APP_VERSION} tag" ${APP_VERSION}
+                      git push origin ${APP_VERSION} HEAD:refs/heads/master
+                    '''
                     env.NEW_VERSION = env.NEW_VERSION.split('-')[0] + '-SNAPSHOT'
                     sh 'docker run --rm -v codeurjc-forge-jenkins-volume:/var/jenkins_home:z -w "$(pwd)" --network=ci-network maven:3-jdk-8-alpine mvn versions:set -DnewVersion=${NEW_VERSION} -f pom.xml -Duser.home="$(pwd)"'
-                    // TODO: publish commit
+                    sh '''#!/bin/bash
+                      git add pom.xml
+                      git commit -m "Update version to ${NEW_VERSION}
+                      git push origin HEAD:refs/for/master
+                    '''
                 }
             }
         }
